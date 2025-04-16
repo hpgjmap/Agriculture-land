@@ -1,8 +1,11 @@
-import FeatureLayer from "@arcgis/core/layers/FeatureLayer";
 import GeoJSONLayer from "@arcgis/core/layers/GeoJSONLayer";
 import Point from "@arcgis/core/geometry/Point";
 import React, { useEffect, useRef, useState } from "react";
-
+import { CalciteButton } from "@esri/calcite-components-react";
+import { createRoot } from "react-dom/client";
+import Popup from "@arcgis/core/widgets/Popup.js";
+import CreateImagePopup from "./ImagePopup";
+import close from "../assets/close.svg";
 const CaptureImage = ({ setCameraActive, view }) => {
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
@@ -70,15 +73,15 @@ const CaptureImage = ({ setCameraActive, view }) => {
 
     const newFPLayer = new GeoJSONLayer({
       url,
-      title: "Captured Image",
+      title: "FP Layer",
       popupTemplate: {
-        title: "Captured Image",
+        title: "Image_1",
         content: [
           {
             type: "media",
             mediaInfos: [
               {
-                title: "Captured Image",
+                // title: "Captured Image",
                 caption: "{comment}",
                 type: "image",
                 value: {
@@ -95,6 +98,7 @@ const CaptureImage = ({ setCameraActive, view }) => {
     view.map.add(newFPLayer);
     console.log(geoJSON);
   };
+
   const handleSavingImageAndLocation = async () => {
     if (!canvasRef.current) {
       console.warn("Canvas not ready");
@@ -134,17 +138,24 @@ const CaptureImage = ({ setCameraActive, view }) => {
             })
           )
           .then(() => {
-            view.openPopup({
+            const popupContainer = document.createElement("div");
+
+            createRoot(popupContainer).render(
+              <CreateImagePopup imageUrl={dataUrl} />
+            );
+            const popup = new Popup({
               title: "Captured Image",
               location: geoJSON.features[0].geometry,
-              content: `<div>
-      <label>Title:</label>
-      <input type="text" id="popup-title" /><br><br>
-      <label>Comment:</label><br>
-      <textarea id="popup-comment"></textarea><br><br>
-      <button onclick="submitPopupData()">Submit</button></div>
-    `,
+              content: popupContainer,
+              dockEnabled: true,
+              dockOptions: {
+                buttonEnabled: true,
+                breakpoint: false,
+                position: "top-right",
+              },
             });
+            view.popup = popup;
+            view.openPopup();
           });
         createFPLayer(geoJSON);
       },
@@ -196,7 +207,29 @@ const CaptureImage = ({ setCameraActive, view }) => {
           objectFit: "cover",
         }}
       ></video>
-
+      <div
+        style={{
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+          padding: "12px",
+          fontSize: "16px",
+          borderRadius: "100%",
+          backdropFilter: "blur(10px)",
+          cursor: "pointer",
+          background: "rgba(255, 255, 255, 0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        onClick={() => {
+          setCameraActive(false);
+          videoRef.current.srcObject = null;
+          stream.current = null;
+        }}
+      >
+        <img src={close} alt="close" width={20} height={20} />
+      </div>
       <div
         style={{
           position: "absolute",
@@ -204,39 +237,33 @@ const CaptureImage = ({ setCameraActive, view }) => {
           width: "100%",
           display: "flex",
           justifyContent: "center",
-          gap: "12px",
+          gap: "40px",
           padding: "16px",
           background: "rgba(0, 0, 0, 0.4)",
           backdropFilter: "blur(4px)",
         }}
       >
-        <button
-          onClick={handleCapture}
-          style={{
-            padding: "12px 20px",
-            fontSize: "16px",
-            borderRadius: "8px",
-            border: "none",
-            backgroundColor: "#00bcd4",
-            color: "white",
-          }}
-        >
-          Capture
-        </button>
+        {captured ? (
+          <CalciteButton scale="l" onClick={handleCapture}>
+            Recapture
+          </CalciteButton>
+        ) : (
+          <CalciteButton scale="l" onClick={handleCapture}>
+            Capture
+          </CalciteButton>
+        )}
 
-        <button
-          onClick={handleSavingImageAndLocation}
-          style={{
-            padding: "12px 20px",
-            fontSize: "16px",
-            borderRadius: "8px",
-            border: "none",
-            backgroundColor: "#f44336",
-            color: "white",
-          }}
-        >
-          Go Back
-        </button>
+        {captured && (
+          <CalciteButton
+            scale="l"
+            style={{
+              "--calcite-button-background-color": "#4CAF50",
+            }}
+            onClick={handleSavingImageAndLocation}
+          >
+            Done
+          </CalciteButton>
+        )}
       </div>
     </div>
   );

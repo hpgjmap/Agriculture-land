@@ -17,13 +17,14 @@ import Map from "@arcgis/core/Map";
 import PortalItem from "@arcgis/core/portal/PortalItem";
 import LayerList from "@arcgis/core/widgets/LayerList";
 import GeoJSONLayer from "@arcgis/core/layers/GeoJSONLayer";
-import PictureMarkerSymbol from "@arcgis/core/symbols/PictureMarkerSymbol";
 import GraphicLayer from "@arcgis/core/layers/GraphicsLayer";
 import Graphic from "@arcgis/core/Graphic";
 import arrowIcon from "./assets/arrow.svg";
 import CaptureImage from "./components/CaptureImage";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer.js";
 import Expand from "@arcgis/core/widgets/Expand.js";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
+
 function App() {
   const mapRef = useRef(null);
   const viewRef = useRef(null);
@@ -49,7 +50,7 @@ function App() {
         center: [80.5929, 16.4937],
         zoom: 11,
       });
-      
+
       portal.load().then((item) => {
         const renderer = new SimpleRenderer({
           symbol: {
@@ -72,15 +73,15 @@ function App() {
           renderer: renderer,
         });
         apLayer.current = geojsonlayer;
-
-        if(geojsonlayer && viewRef.current) {
-          const layerList  = new LayerList({
+        const graphicLayer = new GraphicLayer({title: "graphicsLayer"});
+        if (geojsonlayer && viewRef.current) {
+          const layerList = new LayerList({
             view: viewRef.current,
-          })
+          });
           const expandList = new Expand({
             content: layerList,
             view: viewRef.current,
-          })
+          });
           viewRef.current.ui.add(expandList, "top-right");
         }
         geojsonlayer.queryFeatures().then((result) => {
@@ -90,9 +91,28 @@ function App() {
               geometry: feature.geometry,
             };
           });
+          const graphics = [];
+          features.forEach((feature) => {
+            const symbol = new SimpleMarkerSymbol({
+              style: "circle",
+              color: "red",
+              size: 4,
+              outline: {
+                color: "red",
+                width: 1,
+              },
+            });
+            const graphic = new Graphic({
+              geometry: feature.geometry,
+              symbol: symbol,
+            });
+            graphics.push(graphic);
+          })
+          graphicLayer.addMany(graphics);
           setApFeatures(features);
         });
         mapRef.current.add(geojsonlayer);
+        mapRef.current.add(graphicLayer);
       });
     }
     if (!cameraActive && viewRef.current)
@@ -164,7 +184,10 @@ function App() {
           </div>
         </>
       ) : (
-        <CaptureImage setCameraActive={setCameraActive} view={viewRef.current} />
+        <CaptureImage
+          setCameraActive={setCameraActive}
+          view={viewRef.current}
+        />
       )}
     </CalciteShell>
   );
