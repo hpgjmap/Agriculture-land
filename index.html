@@ -27,12 +27,17 @@
       href="https://js.arcgis.com/calcite-components/3.1.0/calcite.css"
     />
     <style>
-      html, body {
+      html, body, #root {
+  height: 100%;
   margin: 0;
   padding: 0;
-  height: 100%;
-  overscroll-behavior-y: contain;
 }
+
+body {
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+
     </style>
   </head>
   <body>
