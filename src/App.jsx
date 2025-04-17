@@ -120,7 +120,7 @@ function App() {
   }, [cameraActive]);
   return (
     <CalciteShell
-      style={{ height: "100dvh", display: "flex", flexDirection: "column", overflow-y: "auto" }}
+      style={{ height: "100dvh", display: "flex", flexDirection: "column"}}
     >
       {!cameraActive ? (
         <>
