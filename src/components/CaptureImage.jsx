@@ -161,7 +161,6 @@ useEffect(() => {
             layer={layer}
             id={objectId}
             setFpFeatures={setFpFeatures}
-            direction={heading}
             title={null}
             comment={null}
           />
