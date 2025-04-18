@@ -115,7 +115,7 @@ function App() {
             { name: "comment", type: "string", alias: "Comment" },
             { name: "title", type: "string", alias: "Title" },
             { name: "image", type: "string", alias: "Image URL" },
-            { name: "direction", type: "number", alias: "Direction" },
+            { name: "direction", type: "double", alias: "Direction" },
             { name: "photoId", type: "string", alias: "Photo ID" },
           ],
           renderer: new SimpleRenderer({
@@ -133,6 +133,13 @@ function App() {
             title: "Captured Image",
             content: [
               {
+                type: "fields",
+                fieldInfos: [
+                  { fieldName: "comment", label: "Comment" },
+                  { fieldName: "direction", label: "Direction" },
+                ],
+              },
+              {
                 type: "media",
                 mediaInfos: [
                   {
@@ -140,9 +147,7 @@ function App() {
                     type: "image",
                     value: {
                       sourceURL: "{image}",
-                      altText: "{comment} {direction}",
                     },
-                    caption: "{comment}",
                   },
                 ],
               },
@@ -191,7 +196,6 @@ function App() {
         mapRef.current.add(geojsonlayer);
         mapRef.current.add(graphicLayer);
         mapRef.current.add(fpLayer.current);
-        console.log(apLayer.current.fields);
       });
     }
     if (!cameraActive && viewRef.current)
@@ -206,42 +210,44 @@ function App() {
     });
     if (result.features.length) {
       const feature = result.features[0];
-      console.log(feature.attributes.title, feature.attributes.comment, feature.attributes[layer.objectIdField]);
-      await viewRef.current.goTo(feature.geometry);
-      if(layer.title === 'FP Layer'){
-        const popupContainer = document.createElement("div");
-      createRoot(popupContainer).render(
-        <CreateImagePopup
-          imageUrl={feature.attributes.image}
-          view={viewRef.current}
-          layer={layer}
-          id={feature.attributes[layer.objectIdField]}
-          setFpFeatures={setFpFeatures}
-          title={feature.attributes.title}
-          comment={feature.attributes.comment}
-        />
+      console.log(
+        feature.attributes.title,
+        feature.attributes.comment,
+        feature.attributes[layer.objectIdField]
       );
-      const popup = new Popup({
-        title: "Captured Image",
-        location: feature.geometry,
-        content: popupContainer,
-        dockEnabled: true,
-        dockOptions: {
-          buttonEnabled: true,
-          breakpoint: false,
-          position: "top-right",
-        },
-      });
-      viewRef.current.popup = popup;
-      viewRef.current.openPopup();
-    }
-    else {
-      viewRef.current.openPopup({
-        features: [feature],
-        location: feature.geometry
-      });
-
-    }
+      await viewRef.current.goTo(feature.geometry);
+      if (layer.title === "FP Layer") {
+        const popupContainer = document.createElement("div");
+        createRoot(popupContainer).render(
+          <CreateImagePopup
+            imageUrl={feature.attributes.image}
+            view={viewRef.current}
+            layer={layer}
+            id={feature.attributes[layer.objectIdField]}
+            setFpFeatures={setFpFeatures}
+            title={feature.attributes.title}
+            comment={feature.attributes.comment}
+          />
+        );
+        const popup = new Popup({
+          title: "Captured Image",
+          location: feature.geometry,
+          content: popupContainer,
+          dockEnabled: true,
+          dockOptions: {
+            buttonEnabled: true,
+            breakpoint: false,
+            position: "top-right",
+          },
+        });
+        viewRef.current.popup = popup;
+        viewRef.current.openPopup();
+      } else {
+        viewRef.current.openPopup({
+          features: [feature],
+          location: feature.geometry,
+        });
+      }
     }
   };
   return (
@@ -300,7 +306,10 @@ function App() {
                               key={feature.id}
                               label={feature.title}
                               onCalciteListItemSelect={() =>
-                                openPopupForFeature(fpLayer.current, feature.title)
+                                openPopupForFeature(
+                                  fpLayer.current,
+                                  feature.title
+                                )
                               }
                             />
                           ))}
