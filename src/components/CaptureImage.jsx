@@ -8,7 +8,7 @@ import CreateImagePopup from "./ImagePopup";
 import close from "../assets/close.svg";
 import Graphic from "@arcgis/core/Graphic";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-const CaptureImage = ({ setCameraActive, view, layer , setFpFeatures }) => {
+const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures }) => {
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const stream = useRef(null);
@@ -16,30 +16,37 @@ const CaptureImage = ({ setCameraActive, view, layer , setFpFeatures }) => {
   const [captured, setCaptured] = useState(false);
   const [heading, setHeading] = useState(null);
 
-useEffect(() => {
-  const handleOrientation = (event) => {
-    let absoluteHeading = null;
+  useEffect(() => {
+    const handleOrientation = (event) => {
+      let absoluteHeading = null;
 
-    // Prefer absolute heading if available
-    if (event.absolute && typeof event.alpha === "number") {
-      absoluteHeading = 360 - event.alpha; // alpha is clockwise from north
-    } else if (typeof event.webkitCompassHeading === "number") {
-      absoluteHeading = event.webkitCompassHeading;
-    }
+      // Prefer absolute heading if available
+      if (event.absolute && typeof event.alpha === "number") {
+        absoluteHeading = 360 - event.alpha; // alpha is clockwise from north
+      } else if (typeof event.webkitCompassHeading === "number") {
+        absoluteHeading = event.webkitCompassHeading;
+      }
 
-    if (absoluteHeading !== null) {
-      setHeading(absoluteHeading.toFixed(2)); // rounded to 2 decimal places
-    }
-  };
+      if (absoluteHeading !== null) {
+        setHeading(absoluteHeading.toFixed(2)); // rounded to 2 decimal places
+      }
+    };
 
-  window.addEventListener("deviceorientationabsolute", handleOrientation, true);
-  window.addEventListener("deviceorientation", handleOrientation, true);
+    window.addEventListener(
+      "deviceorientationabsolute",
+      handleOrientation,
+      true
+    );
+    window.addEventListener("deviceorientation", handleOrientation, true);
 
-  return () => {
-    window.removeEventListener("deviceorientationabsolute", handleOrientation);
-    window.removeEventListener("deviceorientation", handleOrientation);
-  };
-}, []);
+    return () => {
+      window.removeEventListener(
+        "deviceorientationabsolute",
+        handleOrientation
+      );
+      window.removeEventListener("deviceorientation", handleOrientation);
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -86,15 +93,15 @@ useEffect(() => {
         return;
       }
     }
-  
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-  
+
     if (!stream.current) return;
-  
+
     canvasRef.current.width = videoRef.current.videoWidth;
     canvasRef.current.height = videoRef.current.videoHeight;
-  
+
     ctx.drawImage(
       videoRef.current,
       0,
@@ -109,7 +116,6 @@ useEffect(() => {
     }
     setCaptured(true);
   };
-  
 
   const addNewFeature = (geoJSON) => {
     console.log(geoJSON.geometry);
@@ -126,7 +132,6 @@ useEffect(() => {
       })
       .catch((err) => console.error(err));
   };
-
 
   const handleSavingImageAndLocation = async () => {
     if (!canvasRef.current) {
@@ -170,12 +175,20 @@ useEffect(() => {
           location: geoJSON.geometry,
           content: popupContainer,
           dockEnabled: true,
+          visibleElements: {
+            closeButton: false,
+          },
           dockOptions: {
             buttonEnabled: true,
             breakpoint: false,
             position: "top-right",
+          
           },
         });
+        // view.popup.visibleElements = {
+        //   ...view.popup.visibleElements,
+        //   closeButton: false
+        // };
         view.popup = popup;
         view.openPopup();
       },

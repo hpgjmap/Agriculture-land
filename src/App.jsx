@@ -75,13 +75,6 @@ function App() {
         const geojsonlayer = new GeoJSONLayer({
           portalItem: item,
           renderer: renderer,
-          // fields: [
-          //   { name: "comment", type: "string", alias: "Comment" },
-          //   { name: "title", type: "string", alias: "Title" },
-          //   { name: "startdate", type: "string", alias: "Start Date" },
-          //   { name: "enddate", type: "string", alias: "End Date" },
-          //   { name: "direction", type: "number", alias: "Direction" },
-          // ],
           popupTemplate: {
             title: "{title}",
             content: [
@@ -118,17 +111,48 @@ function App() {
             { name: "direction", type: "double", alias: "Direction" },
             { name: "photoId", type: "string", alias: "Photo ID" },
           ],
-          renderer: new SimpleRenderer({
-            symbol: new SimpleMarkerSymbol({
-              style: "circle",
-              color: "blue",
-              size: 6,
-              outline: {
-                color: "blue",
-                width: 1,
+          renderer: {
+            type: "unique-value",
+            valueExpression: `
+  IIF(
+    IsEmpty($feature.direction) || $feature.direction == null,
+    'no-dir',
+    'has-dir'
+  )
+`,
+            uniqueValueInfos: [
+              {
+                value: "has-dir",
+                symbol: {
+                  type: "picture-marker",
+                  width: "40px",
+                  height: "40px",
+                  url: arrowIcon,
+                },
               },
-            }),
-          }),
+              {
+                value: "no-dir",
+                symbol: {
+                  type: "simple-marker",
+                  style: "circle",
+                  color: "blue",
+                  size: 6,
+                  outline: {
+                    color: "blue",
+                    width: 1,
+                  },
+                },
+              },
+            ],
+            visualVariables: [
+              {
+                type: "rotation",
+                field: "direction",
+                rotationType: "geographic",
+                valueUnit: "degrees",
+              },
+            ],
+          },
           popupTemplate: {
             title: "Captured Image",
             content: [
@@ -154,6 +178,7 @@ function App() {
             ],
           },
         });
+
         apLayer.current = geojsonlayer;
         const graphicLayer = new GraphicLayer({ title: "graphicsLayer" });
         if (geojsonlayer && viewRef.current) {
@@ -240,9 +265,17 @@ function App() {
             position: "top-right",
           },
         });
+        viewRef.current.popup.visibleElements = {
+          ...viewRef.current.popup.visibleElements,
+          closeButton: false,
+        };
         viewRef.current.popup = popup;
         viewRef.current.openPopup();
       } else {
+        viewRef.current.popup.visibleElements = {
+          ...viewRef.current.popup.visibleElements,
+          closeButton: true,
+        };
         viewRef.current.openPopup({
           features: [feature],
           location: feature.geometry,
