@@ -6,12 +6,40 @@ import { createRoot } from "react-dom/client";
 import Popup from "@arcgis/core/widgets/Popup.js";
 import CreateImagePopup from "./ImagePopup";
 import close from "../assets/close.svg";
-const CaptureImage = ({ setCameraActive, view }) => {
+import Graphic from "@arcgis/core/Graphic";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
+const CaptureImage = ({ setCameraActive, view, layer , setFpFeatures }) => {
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const stream = useRef(null);
 
   const [captured, setCaptured] = useState(false);
+  const [heading, setHeading] = useState(null);
+
+useEffect(() => {
+  const handleOrientation = (event) => {
+    let absoluteHeading = null;
+
+    // Prefer absolute heading if available
+    if (event.absolute && typeof event.alpha === "number") {
+      absoluteHeading = 360 - event.alpha; // alpha is clockwise from north
+    } else if (typeof event.webkitCompassHeading === "number") {
+      absoluteHeading = event.webkitCompassHeading;
+    }
+
+    if (absoluteHeading !== null) {
+      setHeading(absoluteHeading.toFixed(2)); // rounded to 2 decimal places
+    }
+  };
+
+  window.addEventListener("deviceorientationabsolute", handleOrientation, true);
+  window.addEventListener("deviceorientation", handleOrientation, true);
+
+  return () => {
+    window.removeEventListener("deviceorientationabsolute", handleOrientation);
+    window.removeEventListener("deviceorientation", handleOrientation);
+  };
+}, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -41,15 +69,32 @@ const CaptureImage = ({ setCameraActive, view }) => {
     };
   }, []);
 
-  const handleCapture = () => {
+  const handleCapture = async () => {
+    // iOS-specific permission request
+    if (
+      typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
+      try {
+        const response = await DeviceOrientationEvent.requestPermission();
+        if (response !== "granted") {
+          alert("Permission for device orientation was denied.");
+          return;
+        }
+      } catch (err) {
+        console.error("Error requesting orientation permission:", err);
+        return;
+      }
+    }
+  
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-
+  
     if (!stream.current) return;
-
+  
     canvasRef.current.width = videoRef.current.videoWidth;
     canvasRef.current.height = videoRef.current.videoHeight;
-
+  
     ctx.drawImage(
       videoRef.current,
       0,
@@ -64,40 +109,24 @@ const CaptureImage = ({ setCameraActive, view }) => {
     }
     setCaptured(true);
   };
+  
 
-  const createFPLayer = (geoJSON) => {
-    const blob = new Blob([JSON.stringify(geoJSON)], {
-      type: "application/json",
+  const addNewFeature = (geoJSON) => {
+    console.log(geoJSON.geometry);
+    const newGraphic = new Graphic({
+      attributes: geoJSON.attributes,
+      geometry: geoJSON.geometry,
     });
-    const url = URL.createObjectURL(blob);
-
-    const newFPLayer = new GeoJSONLayer({
-      url,
-      title: "FP Layer",
-      popupTemplate: {
-        title: "Image_1",
-        content: [
-          {
-            type: "media",
-            mediaInfos: [
-              {
-                // title: "Captured Image",
-                caption: "{comment}",
-                type: "image",
-                value: {
-                  sourceURL: "{image}",
-                  altText: "{comment}",
-                  imageData: "{image}",
-                },
-              },
-            ],
-          },
-        ],
-      },
-    });
-    view.map.add(newFPLayer);
-    console.log(geoJSON);
+    return layer
+      .applyEdits({
+        addFeatures: [newGraphic],
+      })
+      .then((result) => {
+        return result.addFeatureResults[0].objectId;
+      })
+      .catch((err) => console.error(err));
   };
+
 
   const handleSavingImageAndLocation = async () => {
     if (!canvasRef.current) {
@@ -105,59 +134,50 @@ const CaptureImage = ({ setCameraActive, view }) => {
       return;
     }
     const dataUrl = canvasRef.current.toDataURL("image/jpeg", 1);
-    let heading = null;
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const geoJSON = {
-          type: "FeatureCollection",
-          features: [
-            {
-              type: "Feature",
-              properties: {
-                comment: "",
-                image: dataUrl,
-                direction: heading,
-                photoId: "",
-              },
-              geometry: {
-                type: "Point",
-                coordinates: [
-                  position.coords.longitude,
-                  position.coords.latitude,
-                ],
-              },
-            },
-          ],
+          attributes: {
+            title: "",
+            comment: "",
+            image: dataUrl,
+            direction: heading,
+            photoId: "",
+          },
+          geometry: new Point({
+            longitude: position.coords.longitude,
+            latitude: position.coords.latitude,
+          }),
         };
-        view
-          .goTo(
-            new Point({
-              longitude: position.coords.longitude,
-              latitude: position.coords.latitude,
-            })
-          )
-          .then(() => {
-            const popupContainer = document.createElement("div");
+        await view.goTo(geoJSON.geometry);
 
-            createRoot(popupContainer).render(
-              <CreateImagePopup imageUrl={dataUrl} />
-            );
-            const popup = new Popup({
-              title: "Captured Image",
-              location: geoJSON.features[0].geometry,
-              content: popupContainer,
-              dockEnabled: true,
-              dockOptions: {
-                buttonEnabled: true,
-                breakpoint: false,
-                position: "top-right",
-              },
-            });
-            view.popup = popup;
-            view.openPopup();
-          });
-        createFPLayer(geoJSON);
+        const objectId = await addNewFeature(geoJSON);
+        const popupContainer = document.createElement("div");
+        createRoot(popupContainer).render(
+          <CreateImagePopup
+            imageUrl={dataUrl}
+            view={view}
+            layer={layer}
+            id={objectId}
+            setFpFeatures={setFpFeatures}
+            title={null}
+            comment={null}
+          />
+        );
+        const popup = new Popup({
+          title: "Captured Image",
+          location: geoJSON.geometry,
+          content: popupContainer,
+          dockEnabled: true,
+          dockOptions: {
+            buttonEnabled: true,
+            breakpoint: false,
+            position: "top-right",
+          },
+        });
+        view.popup = popup;
+        view.openPopup();
       },
       (err) => console.error(err),
       {

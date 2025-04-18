@@ -24,16 +24,20 @@ import CaptureImage from "./components/CaptureImage";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer.js";
 import Expand from "@arcgis/core/widgets/Expand.js";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-
+import Query from "@arcgis/core/rest/support/Query";
+import { createRoot } from "react-dom/client";
+import CreateImagePopup from "./components/ImagePopup";
+import Popup from "@arcgis/core/widgets/Popup";
 function App() {
   const mapRef = useRef(null);
   const viewRef = useRef(null);
   const apLayer = useRef(null);
-  // const fpLayer = useRef(null);
+  const fpLayer = useRef(null);
 
   const [photosActive, setPhotosActive] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [apFeatures, setApFeatures] = useState([]);
+  const [fpFeatures, setFpFeatures] = useState([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -71,9 +75,82 @@ function App() {
         const geojsonlayer = new GeoJSONLayer({
           portalItem: item,
           renderer: renderer,
+          // fields: [
+          //   { name: "comment", type: "string", alias: "Comment" },
+          //   { name: "title", type: "string", alias: "Title" },
+          //   { name: "startdate", type: "string", alias: "Start Date" },
+          //   { name: "enddate", type: "string", alias: "End Date" },
+          //   { name: "direction", type: "number", alias: "Direction" },
+          // ],
+          popupTemplate: {
+            title: "{title}",
+            content: [
+              {
+                type: "fields",
+                fieldInfos: [
+                  { fieldName: "comment", label: "Comment" },
+                  { fieldName: "direction", label: "Direction" },
+                  { fieldName: "startdate", label: "Start Date" },
+                  { fieldName: "enddate", label: "End Date" },
+                ],
+              },
+            ],
+          },
+        });
+        const initialGeoJSON = {
+          type: "FeatureCollection",
+          features: [],
+        };
+
+        const blob = new Blob([JSON.stringify(initialGeoJSON)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        fpLayer.current = new GeoJSONLayer({
+          url,
+          editingEnabled: true,
+          title: "FP Layer",
+          geometryType: "point",
+          fields: [
+            { name: "comment", type: "string", alias: "Comment" },
+            { name: "title", type: "string", alias: "Title" },
+            { name: "image", type: "string", alias: "Image URL" },
+            { name: "direction", type: "number", alias: "Direction" },
+            { name: "photoId", type: "string", alias: "Photo ID" },
+          ],
+          renderer: new SimpleRenderer({
+            symbol: new SimpleMarkerSymbol({
+              style: "circle",
+              color: "blue",
+              size: 6,
+              outline: {
+                color: "blue",
+                width: 1,
+              },
+            }),
+          }),
+          popupTemplate: {
+            title: "Captured Image",
+            content: [
+              {
+                type: "media",
+                mediaInfos: [
+                  {
+                    title: "{title}",
+                    type: "image",
+                    value: {
+                      sourceURL: "{image}",
+                      altText: "{comment} {direction}",
+                    },
+                    caption: "{comment}",
+                  },
+                ],
+              },
+            ],
+          },
         });
         apLayer.current = geojsonlayer;
-        const graphicLayer = new GraphicLayer({title: "graphicsLayer"});
+        const graphicLayer = new GraphicLayer({ title: "graphicsLayer" });
         if (geojsonlayer && viewRef.current) {
           const layerList = new LayerList({
             view: viewRef.current,
@@ -107,20 +184,69 @@ function App() {
               symbol: symbol,
             });
             graphics.push(graphic);
-          })
+          });
           graphicLayer.addMany(graphics);
           setApFeatures(features);
         });
         mapRef.current.add(geojsonlayer);
         mapRef.current.add(graphicLayer);
+        mapRef.current.add(fpLayer.current);
+        console.log(apLayer.current.fields);
       });
     }
     if (!cameraActive && viewRef.current)
       viewRef.current.container = "map-view";
   }, [cameraActive]);
+  const openPopupForFeature = async (layer, title) => {
+    // viewRef.current.zoom = 11;
+    const result = await layer.queryFeatures({
+      where: `title = '${title.replace(/'/g, "''")}'`,
+      returnGeometry: true,
+      outFields: ["*"],
+    });
+    if (result.features.length) {
+      const feature = result.features[0];
+      console.log(feature.attributes.title, feature.attributes.comment, feature.attributes[layer.objectIdField]);
+      await viewRef.current.goTo(feature.geometry);
+      if(layer.title === 'FP Layer'){
+        const popupContainer = document.createElement("div");
+      createRoot(popupContainer).render(
+        <CreateImagePopup
+          imageUrl={feature.attributes.image}
+          view={viewRef.current}
+          layer={layer}
+          id={feature.attributes[layer.objectIdField]}
+          setFpFeatures={setFpFeatures}
+          title={feature.attributes.title}
+          comment={feature.attributes.comment}
+        />
+      );
+      const popup = new Popup({
+        title: "Captured Image",
+        location: feature.geometry,
+        content: popupContainer,
+        dockEnabled: true,
+        dockOptions: {
+          buttonEnabled: true,
+          breakpoint: false,
+          position: "top-right",
+        },
+      });
+      viewRef.current.popup = popup;
+      viewRef.current.openPopup();
+    }
+    else {
+      viewRef.current.openPopup({
+        features: [feature],
+        location: feature.geometry
+      });
+
+    }
+    }
+  };
   return (
     <CalciteShell
-      style={{ height: "100dvh", display: "flex", flexDirection: "column"}}
+      style={{ height: "100dvh", display: "flex", flexDirection: "column" }}
     >
       {!cameraActive ? (
         <>
@@ -146,34 +272,61 @@ function App() {
                 <CalciteAction icon="home"></CalciteAction>
               </CalcitePanel>
             </CalciteShellPanel>
-
-            <div id="map-view" style={{ flex: 1 }}></div>
-            {photosActive && (
-              <CalciteShellPanel width="m">
-                <CalcitePanel heading="Photos">
-                  <CalciteList>
-                    <CalciteListItemGroup heading="List Required">
-                      {apFeatures.length > 0 &&
-                        apFeatures.map((feature) => (
-                          <CalciteListItem
-                            key={feature.title}
-                            label={feature.title}
-                          />
-                        ))}
-                    </CalciteListItemGroup>
-                    <CalciteListItemGroup heading="List Taken">
-                      <CalciteListItem label="Hello 2" />
-                    </CalciteListItemGroup>
-                  </CalciteList>
-                  <CalciteButton
-                    slot="footer"
-                    onClick={() => setCameraActive(true)}
-                  >
-                    New
-                  </CalciteButton>
-                </CalcitePanel>
-              </CalciteShellPanel>
-            )}
+            <div style={{ flex: 1, display: "flex" }}>
+              <div id="map-view" style={{ flex: 1 }}></div>
+              {photosActive && (
+                <CalciteShellPanel width="m">
+                  <CalcitePanel heading="Photos">
+                    <CalciteList>
+                      <CalciteListItemGroup heading="List Required">
+                        {apFeatures.length > 0 &&
+                          apFeatures.map((feature) => (
+                            <CalciteListItem
+                              onCalciteListItemSelect={() =>
+                                openPopupForFeature(
+                                  apLayer.current,
+                                  feature.title
+                                )
+                              }
+                              key={feature.title}
+                              label={feature.title}
+                            />
+                          ))}
+                      </CalciteListItemGroup>
+                      <CalciteListItemGroup heading="List Taken">
+                        {fpFeatures.length > 0 &&
+                          fpFeatures.map((feature) => (
+                            <CalciteListItem
+                              key={feature.id}
+                              label={feature.title}
+                              onCalciteListItemSelect={() =>
+                                openPopupForFeature(fpLayer.current, feature.title)
+                              }
+                            />
+                          ))}
+                      </CalciteListItemGroup>
+                    </CalciteList>
+                    <div slot="footer" style={{ display: "flex", gap: "10px" }}>
+                      <CalciteButton
+                        slot="footer"
+                        onClick={() => setCameraActive(true)}
+                      >
+                        New
+                      </CalciteButton>
+                      <CalciteButton
+                        slot="footer"
+                        style={{
+                          "--calcite-button-background-color": "#4CAF50",
+                        }}
+                        disabled={fpFeatures.length === 0}
+                      >
+                        Save to Portal
+                      </CalciteButton>
+                    </div>
+                  </CalcitePanel>
+                </CalciteShellPanel>
+              )}
+            </div>
             <CalciteShellPanel slot="panel-end" width>
               <CalciteAction
                 icon="images"
@@ -187,6 +340,8 @@ function App() {
         <CaptureImage
           setCameraActive={setCameraActive}
           view={viewRef.current}
+          layer={fpLayer.current}
+          setFpFeatures={setFpFeatures}
         />
       )}
     </CalciteShell>
