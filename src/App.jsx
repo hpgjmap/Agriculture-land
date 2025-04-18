@@ -19,12 +19,12 @@ import LayerList from "@arcgis/core/widgets/LayerList";
 import GeoJSONLayer from "@arcgis/core/layers/GeoJSONLayer";
 import GraphicLayer from "@arcgis/core/layers/GraphicsLayer";
 import Graphic from "@arcgis/core/Graphic";
-import arrowIcon from "./assets/arrow.svg";
+import apArrow from "./assets/arrow.svg";
+import fpArrow from "./assets/fparrow.svg";
 import CaptureImage from "./components/CaptureImage";
 import SimpleRenderer from "@arcgis/core/renderers/SimpleRenderer.js";
 import Expand from "@arcgis/core/widgets/Expand.js";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-import Query from "@arcgis/core/rest/support/Query";
 import { createRoot } from "react-dom/client";
 import CreateImagePopup from "./components/ImagePopup";
 import Popup from "@arcgis/core/widgets/Popup";
@@ -61,7 +61,7 @@ function App() {
             type: "picture-marker",
             width: "40px",
             height: "40px",
-            url: arrowIcon,
+            url: apArrow,
           },
           visualVariables: [
             {
@@ -127,7 +127,7 @@ function App() {
                   type: "picture-marker",
                   width: "40px",
                   height: "40px",
-                  url: arrowIcon,
+                  url: fpArrow,
                 },
               },
               {
@@ -180,7 +180,6 @@ function App() {
         });
 
         apLayer.current = geojsonlayer;
-        const graphicLayer = new GraphicLayer({ title: "graphicsLayer" });
         if (geojsonlayer && viewRef.current) {
           const layerList = new LayerList({
             view: viewRef.current,
@@ -198,28 +197,10 @@ function App() {
               geometry: feature.geometry,
             };
           });
-          const graphics = [];
-          features.forEach((feature) => {
-            const symbol = new SimpleMarkerSymbol({
-              style: "circle",
-              color: "red",
-              size: 4,
-              outline: {
-                color: "red",
-                width: 1,
-              },
-            });
-            const graphic = new Graphic({
-              geometry: feature.geometry,
-              symbol: symbol,
-            });
-            graphics.push(graphic);
-          });
-          graphicLayer.addMany(graphics);
+
           setApFeatures(features);
         });
         mapRef.current.add(geojsonlayer);
-        mapRef.current.add(graphicLayer);
         mapRef.current.add(fpLayer.current);
       });
     }

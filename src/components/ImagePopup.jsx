@@ -26,7 +26,7 @@ const CreateImagePopup = ({
   });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isInvalid, setIsInvalid] = useState(false);
-  
+
   const handleImageDataChange = (e) => {
     const { name, value } = e.target;
     if (name === "title") {
@@ -85,6 +85,28 @@ const CreateImagePopup = ({
         justifyContent: "space-between",
       }}
     >
+      <div style={{ display: "flex", gap: "10px" }}>
+        <CalciteButton
+          // onClick={handleModifyLocation}
+          appearance="solid"
+          color="blue"
+          scale="m"
+          iconStart="pin"
+        >
+          Modify Location
+        </CalciteButton>
+
+        <CalciteButton
+          // onClick={handleModifyDirection}
+          appearance="solid"
+          color="yellow"
+          scale="m"
+          iconStart="compass"
+        >
+          Modify Direction
+        </CalciteButton>
+      </div>
+
       <div
         style={{
           opacity: confirmDelete ? 0.4 : 1,
