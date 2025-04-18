@@ -10,6 +10,7 @@ const CreateImagePopup = ({
   setFpFeatures,
   title,
   comment,
+  direction
 }) => {
   const [imageData, setImageData] = useState({
     title: title ? title : "",
@@ -86,6 +87,9 @@ const CreateImagePopup = ({
           Captured Image
         </span>
         <img src={imageUrl} alt="image" />
+      </div>
+      <div>
+        direction is : {direction}
       </div>
       <div style={{ display: "flex", gap: "5px" }}>
         <CalciteButton
