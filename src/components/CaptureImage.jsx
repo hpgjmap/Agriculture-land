@@ -8,7 +8,7 @@ import CreateImagePopup from "./ImagePopup";
 import close from "../assets/close.svg";
 import Graphic from "@arcgis/core/Graphic";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures }) => {
+const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures, setPhotosActive }) => {
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const stream = useRef(null);
@@ -168,6 +168,7 @@ const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures }) => {
             setFpFeatures={setFpFeatures}
             title={null}
             comment={null}
+            feature={geoJSON}
           />
         );
         const popup = new Popup({
@@ -182,7 +183,6 @@ const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures }) => {
             buttonEnabled: true,
             breakpoint: false,
             position: "top-right",
-          
           },
         });
         // view.popup.visibleElements = {
@@ -200,6 +200,7 @@ const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures }) => {
       }
     );
     setCameraActive(false);
+    setPhotosActive(false);
   };
   return (
     <div

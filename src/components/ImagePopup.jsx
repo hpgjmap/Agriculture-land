@@ -1,15 +1,16 @@
 import Graphic from "@arcgis/core/Graphic";
 import {
-  CalciteAlert,
   CalciteButton,
-  CalciteDialog,
   CalciteInput,
   CalciteLabel,
-  CalciteModal,
-  CalciteNotice,
-  CalcitePopover,
 } from "@esri/calcite-components-react";
-import { useRef, useState } from "react";
+import Circle from "@arcgis/core/geometry/Circle.js";
+import { useEffect, useRef, useState } from "react";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import * as containsOperator from "@arcgis/core/geometry/operators/containsOperator.js";
+import * as projectOperator from "@arcgis/core/geometry/operators/projectOperator.js";
+import { createRoot } from "react-dom/client";
+import CreateAlert from "./CreateAlert";
 
 const CreateImagePopup = ({
   imageUrl,
@@ -19,14 +20,24 @@ const CreateImagePopup = ({
   setFpFeatures,
   title,
   comment,
+  feature,
 }) => {
+  const clickHandlerRef = useRef(null);
+
   const [imageData, setImageData] = useState({
     title: title ? title : "Image_1",
     comment: comment ? comment : "This is image_1",
   });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isInvalid, setIsInvalid] = useState(false);
+  const [modifyLocation, setModifyLocation] = useState(false);
 
+  // const graphicLayer = useRef(null);
+  useEffect(() => {
+    projectOperator.load();
+    // graphicLayer.current = new GraphicsLayer({ title: "Temporary Layer" });
+    // view.map.add(graphicLayer.current);
+  }, [view]);
   const handleImageDataChange = (e) => {
     const { name, value } = e.target;
     if (name === "title") {
@@ -74,6 +85,112 @@ const CreateImagePopup = ({
   };
   const scrollContainerRef = useRef(null);
 
+  const saveNewLocation = (updatedGraphic) => {
+    layer
+      .applyEdits({
+        updateFeatures: [updatedGraphic],
+      })
+      .then((result) => {
+        console.log("geometry updated successfully.", result);
+        view.graphics.removeAll();
+        // graphicLayer.current.removeAll();
+      })
+      .catch((error) => {
+        console.error("Error updating feature:", error);
+      });
+  };
+  // const handleSetDirection = (currPoint, newDirection) => {
+  //   const initialDirection = currPoint.attributes.direction;
+
+  // }
+
+  const handleModifyLocation = () => {
+    if (modifyLocation) {
+      // Remove the previous click handler
+      if (clickHandlerRef.current) {
+        clickHandlerRef.current.remove();
+        clickHandlerRef.current = null;
+      }
+      view.graphics.removeAll();
+      view.container.style.cursor = "auto";
+      setModifyLocation(false);
+      return;
+    }
+
+    view.container.style.cursor = "crosshair";
+    view.zoom = 18;
+
+    const circleGeometry = new Circle({
+      center: feature.geometry,
+      radius: 50,
+      radiusUnit: "meters",
+      geodesic: true,
+    });
+
+    const circleGraphic = new Graphic({
+      geometry: circleGeometry,
+      symbol: {
+        type: "simple-fill",
+        color: [0, 0, 255, 0.1],
+        outline: {
+          color: [0, 0, 255, 1],
+          width: 2,
+        },
+      },
+    });
+
+    view.graphics.add(circleGraphic);
+    setModifyLocation(true);
+
+    clickHandlerRef.current = view.on("click", (event) => {
+      const newGraphic = new Graphic({
+        geometry: event.mapPoint,
+        symbol: {
+          type: "simple-marker",
+          color: [255, 0, 0],
+          size: 6,
+          outline: {
+            color: [255, 0, 0],
+            width: 2,
+          },
+        },
+        attributes: {
+          [layer.objectIdField]: id,
+        },
+      });
+
+      const projectedCircle = projectOperator.execute(
+        circleGeometry,
+        event.mapPoint.spatialReference
+      );
+
+      if (containsOperator.execute(projectedCircle, event.mapPoint)) {
+        saveNewLocation(newGraphic);
+      } else {
+        let dialog = document.createElement("calcite-dialog");
+        dialog.open = true;
+        dialog.modal = true;
+        dialog.kind = "danger";
+        document.body.appendChild(dialog);
+
+        const closeDialog = () => {
+          if (dialog) dialog.remove();
+        };
+        createRoot(dialog).render(<CreateAlert closeDialog={closeDialog} />);
+        view.graphics.removeAll();
+      }
+        handleSave();
+
+      // Clean up
+      if (clickHandlerRef.current) {
+        clickHandlerRef.current.remove();
+        clickHandlerRef.current = null;
+      }
+      view.container.style.cursor = "auto";
+      setModifyLocation(false);
+    });
+  };
+
   return (
     <div
       ref={scrollContainerRef}
@@ -87,23 +204,29 @@ const CreateImagePopup = ({
     >
       <div style={{ display: "flex", gap: "10px" }}>
         <CalciteButton
-          // onClick={handleModifyLocation}
-          appearance="solid"
-          color="blue"
+          style={{
+            width: "100%",
+          }}
+          onClick={handleModifyLocation}
+          appearance={modifyLocation ? "outline-fill" : "solid"}
+          kind={modifyLocation ? "danger" : "brand"}
           scale="m"
           iconStart="pin"
         >
-          Modify Location
+          {!modifyLocation ? "Modify Location" : "Cancel"}
         </CalciteButton>
 
         <CalciteButton
           // onClick={handleModifyDirection}
           appearance="solid"
-          color="yellow"
           scale="m"
           iconStart="compass"
+          style={{
+            "--calcite-button-background-color": "rgb(87, 90, 88)",
+            width: "100%",
+          }}
         >
-          Modify Direction
+          Set Direction
         </CalciteButton>
       </div>
 

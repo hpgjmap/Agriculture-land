@@ -233,6 +233,7 @@ function App() {
             setFpFeatures={setFpFeatures}
             title={feature.attributes.title}
             comment={feature.attributes.comment}
+            feature={feature}
           />
         );
         const popup = new Popup({
@@ -365,6 +366,7 @@ function App() {
           view={viewRef.current}
           layer={fpLayer.current}
           setFpFeatures={setFpFeatures}
+          setPhotosActive={setPhotosActive}
         />
       )}
     </CalciteShell>
