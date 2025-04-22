@@ -1,0 +1,1 @@
+import{t as n}from"./OperatorTouches-CoAqmN3h.js";import{eF as o,eG as c}from"./index-CtmyMuv4.js";const s=new n;function u(t,r){const e=o(t);return s.execute(e.getGeometry(),c(r),e.getSpatialReference(),null)}export{u as execute};

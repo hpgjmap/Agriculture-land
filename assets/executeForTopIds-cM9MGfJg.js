@@ -1,1 +1,0 @@
-import{eA as m}from"./index-YH06oXPr.js";import{m as e}from"./queryTopFeatures-DjIDM0XL.js";import s from"./TopFeaturesQuery-ByBHJdOz.js";async function n(o,r,t){const a=m(o);return(await e(a,s.from(r),{...t})).data.objectIds}export{n as executeForTopIds};

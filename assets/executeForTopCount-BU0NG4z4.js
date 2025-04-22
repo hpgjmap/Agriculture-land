@@ -1,0 +1,1 @@
+import{eA as m}from"./index-CtmyMuv4.js";import{c as n}from"./queryTopFeatures-Cl7BPLT_.js";import c from"./TopFeaturesQuery-0QoR-5im.js";async function i(o,t,r){const a=m(o);return(await n(a,c.from(t),{...r})).data.count}export{i as executeForTopCount};

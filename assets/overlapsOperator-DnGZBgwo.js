@@ -1,1 +1,0 @@
-import{t as n}from"./OperatorOverlaps-D1s4CyZc.js";import{eF as r,eG as c}from"./index-YH06oXPr.js";const s=new n;function u(t,o){const e=r(t);return s.execute(e.getGeometry(),c(o),e.getSpatialReference(),null)}export{u as execute};
