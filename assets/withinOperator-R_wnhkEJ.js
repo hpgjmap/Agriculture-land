@@ -1,0 +1,1 @@
+import{t as n}from"./OperatorWithin-CHa4u_5m.js";import{eF as r,eG as c}from"./index-CQBquChn.js";const s=new n;function u(t,o){const e=r(t);return s.execute(e.getGeometry(),c(o),e.getSpatialReference(),null)}export{u as execute};
