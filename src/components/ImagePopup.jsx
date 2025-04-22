@@ -12,6 +12,7 @@ import * as containsOperator from "@arcgis/core/geometry/operators/containsOpera
 import * as projectOperator from "@arcgis/core/geometry/operators/projectOperator.js";
 import { createRoot } from "react-dom/client";
 import CreateAlert from "./CreateAlert";
+import { getAngle } from "../Helper/CalculateAngle";
 
 const CreateImagePopup = ({
   imageUrl,
@@ -33,6 +34,7 @@ const CreateImagePopup = ({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isInvalid, setIsInvalid] = useState(false);
   const [modifyLocation, setModifyLocation] = useState(false);
+  const [setDirection, setSetDirection] = useState(false);
   const [isTitleDuplicate, setIsTitleDuplicate] = useState(false);
   // const graphicLayer = useRef(null);
   useEffect(() => {
@@ -57,7 +59,9 @@ const CreateImagePopup = ({
       behavior: "smooth",
     });
     const checkDuplicate = fpFeatures.some(
-      (item) => item.title === imageData.title
+      (item) =>
+        item.title !== feature.attributes.title &&
+        item.title === imageData.title
     );
 
     if (checkDuplicate) {
@@ -114,14 +118,67 @@ const CreateImagePopup = ({
         console.error("Error updating feature:", error);
       });
   };
-  // const handleSetDirection = (currPoint, newDirection) => {
-  //   const initialDirection = currPoint.attributes.direction;
+  const handleSetDirection = () => {
+    view.goTo({
+      target: feature.geometry,
+      zoom: 18,
+    });
+    if (setDirection) {
+      // Turn off direction setting mode
+      if (clickHandlerRef.current) {
+        clickHandlerRef.current.remove();
+        clickHandlerRef.current = null;
+      }
+      view.graphics.removeAll();
+      view.container.style.cursor = "auto";
+      setSetDirection(false);
+      return;
+    }
 
-  // }
+    // Activate direction setting mode
+    view.container.style.cursor = "crosshair";
+    setSetDirection(true);
+    clickHandlerRef.current = view.on("click", (event) => {
+      console.log("click event triggered"); // Add this to debug
+
+      const refPoint = feature.geometry;
+      const clickPoint = event.mapPoint;
+      console.log(clickPoint);
+      const x1 = refPoint.x,
+        y1 = refPoint.y;
+      const x2 = clickPoint.longitude,
+        y2 = clickPoint.latitude;
+      console.log("Ref:", y1, x1);
+      console.log("Click:", y2, x2);
+      const angle = getAngle(y1, x1, y2, x2);
+      console.log("Angle:", angle);
+
+      const newGraphic = new Graphic({
+        attributes: {
+          direction: angle,
+          [layer.objectIdField]: id,
+        },
+      });
+
+      layer
+        .applyEdits({
+          updateFeatures: [newGraphic],
+        })
+        .then((result) => console.log("Updated direction:", result))
+        .catch((err) => console.log("Failed to update direction", err));
+
+      if (clickHandlerRef.current) {
+        clickHandlerRef.current.remove();
+        clickHandlerRef.current = null;
+      }
+      view.container.style.cursor = "auto";
+      setSetDirection(false);
+      handleSave();
+    });
+  };
 
   const handleModifyLocation = () => {
     if (modifyLocation) {
-      // Remove the previous click handler
       if (clickHandlerRef.current) {
         clickHandlerRef.current.remove();
         clickHandlerRef.current = null;
@@ -133,8 +190,10 @@ const CreateImagePopup = ({
     }
 
     view.container.style.cursor = "crosshair";
-    view.zoom = 18;
-
+    view.goTo({
+      target: feature.geometry,
+      zoom: 18,
+    });
     const circleGeometry = new Circle({
       center: feature.geometry,
       radius: 50,
@@ -196,7 +255,6 @@ const CreateImagePopup = ({
       }
       handleSave();
 
-      // Clean up
       if (clickHandlerRef.current) {
         clickHandlerRef.current.remove();
         clickHandlerRef.current = null;
@@ -205,7 +263,6 @@ const CreateImagePopup = ({
       setModifyLocation(false);
     });
   };
-  const handleModifyDirection = () => {};
   return (
     <div
       ref={scrollContainerRef}
@@ -232,16 +289,19 @@ const CreateImagePopup = ({
         </CalciteButton>
 
         <CalciteButton
-          onClick={handleModifyDirection}
-          appearance="solid"
+          onClick={handleSetDirection}
           scale="m"
+          appearance={setDirection ? "outline-fill" : "solid"}
           iconStart="compass"
+          kind={setDirection ? "danger" : "brand"}
           style={{
-            "--calcite-button-background-color": "rgb(87, 90, 88)",
+            "--calcite-button-background-color":
+              !setDirection && "rgb(87, 90, 88)",
+
             width: "50%",
           }}
         >
-          Set Direction
+          {!setDirection ? "Set Direction" : "Cancel"}
         </CalciteButton>
       </div>
 

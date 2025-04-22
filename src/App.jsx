@@ -209,6 +209,7 @@ function App() {
   }, [cameraActive]);
   const openPopupForFeature = async (layer, title) => {
     // viewRef.current.zoom = 11;
+    setPhotosActive(false);
     const result = await layer.queryFeatures({
       where: `title = '${title.replace(/'/g, "''")}'`,
       returnGeometry: true,
