@@ -1,1 +1,0 @@
-import{eA as s,bx as i}from"./index-CtmyMuv4.js";import{p}from"./queryTopFeatures-Cl7BPLT_.js";import n from"./TopFeaturesQuery-0QoR-5im.js";async function d(r,o,t,a){const e=s(r),m={...a},{data:f}=await p(e,n.from(o),t,m);return i.fromJSON(f)}export{d as executeTopFeaturesQuery};

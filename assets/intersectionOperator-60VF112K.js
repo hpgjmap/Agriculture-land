@@ -1,1 +1,0 @@
-import{eF as s,gC as o,eG as c,gD as i,bD as u}from"./index-CtmyMuv4.js";import{o as f,u as m}from"./operatorIntersection-BUz7l48A.js";function x(a,r){const t=s(a),e=t.getSpatialReference();return o(f(t.getGeometry(),c(r),e),e)}function G(a,r){const[t,e]=i(a);return m(t,c(r),e,7).map(n=>o(n,e)).filter(u)}export{x as execute,G as executeMany};

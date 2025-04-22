@@ -1,1 +1,0 @@
-import{d2 as i}from"./index-CtmyMuv4.js";import{a as n}from"./hitTestSelectUtils-fuo0pasT.js";class o extends n{constructor(t,s,r){super(s,r),this.point=t}equals(t){return t instanceof o&&i(this.point,t.point)}}export{o as n};
