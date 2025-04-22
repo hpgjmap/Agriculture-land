@@ -3,6 +3,7 @@ import {
   CalciteButton,
   CalciteInput,
   CalciteLabel,
+  CalciteNotice,
 } from "@esri/calcite-components-react";
 import Circle from "@arcgis/core/geometry/Circle.js";
 import { useEffect, useRef, useState } from "react";
@@ -21,17 +22,18 @@ const CreateImagePopup = ({
   title,
   comment,
   feature,
+  fpFeatures,
 }) => {
   const clickHandlerRef = useRef(null);
 
   const [imageData, setImageData] = useState({
-    title: title ? title : "Image_1",
-    comment: comment ? comment : "This is image_1",
+    title: title ? title : `Image_${id}`,
+    comment: comment ? comment : `This is Image_${id}`,
   });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isInvalid, setIsInvalid] = useState(false);
   const [modifyLocation, setModifyLocation] = useState(false);
-
+  const [isTitleDuplicate, setIsTitleDuplicate] = useState(false);
   // const graphicLayer = useRef(null);
   useEffect(() => {
     projectOperator.load();
@@ -50,6 +52,19 @@ const CreateImagePopup = ({
   };
 
   const handleSave = () => {
+    scrollContainerRef.current.scrollTo({
+      top: scrollContainerRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+    const checkDuplicate = fpFeatures.some(
+      (item) => item.title === imageData.title
+    );
+
+    if (checkDuplicate) {
+      console.log("failed to save.");
+      setIsTitleDuplicate(true);
+      return;
+    }
     setFpFeatures((prev) => {
       const existingIndex = prev.findIndex((item) => item.id === id);
 
@@ -131,9 +146,9 @@ const CreateImagePopup = ({
       geometry: circleGeometry,
       symbol: {
         type: "simple-fill",
-        color: [0, 0, 255, 0.1],
+        color: [0, 122, 194, 0.1],
         outline: {
-          color: [0, 0, 255, 1],
+          color: [0, 122, 194],
           width: 2,
         },
       },
@@ -179,7 +194,7 @@ const CreateImagePopup = ({
         createRoot(dialog).render(<CreateAlert closeDialog={closeDialog} />);
         view.graphics.removeAll();
       }
-        handleSave();
+      handleSave();
 
       // Clean up
       if (clickHandlerRef.current) {
@@ -190,7 +205,7 @@ const CreateImagePopup = ({
       setModifyLocation(false);
     });
   };
-
+  const handleModifyDirection = () => {};
   return (
     <div
       ref={scrollContainerRef}
@@ -205,7 +220,7 @@ const CreateImagePopup = ({
       <div style={{ display: "flex", gap: "10px" }}>
         <CalciteButton
           style={{
-            width: "100%",
+            width: "50%",
           }}
           onClick={handleModifyLocation}
           appearance={modifyLocation ? "outline-fill" : "solid"}
@@ -217,13 +232,13 @@ const CreateImagePopup = ({
         </CalciteButton>
 
         <CalciteButton
-          // onClick={handleModifyDirection}
+          onClick={handleModifyDirection}
           appearance="solid"
           scale="m"
           iconStart="compass"
           style={{
             "--calcite-button-background-color": "rgb(87, 90, 88)",
-            width: "100%",
+            width: "50%",
           }}
         >
           Set Direction
@@ -232,7 +247,7 @@ const CreateImagePopup = ({
 
       <div
         style={{
-          opacity: confirmDelete ? 0.4 : 1,
+          opacity: confirmDelete || isTitleDuplicate ? 0.4 : 1,
           display: "flex",
           flexDirection: "column",
           width: "100%",
@@ -243,7 +258,7 @@ const CreateImagePopup = ({
         <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
           <span style={{ fontSize: "16px", fontWeight: "bold" }}>Title</span>
           <CalciteInput
-            disabled={confirmDelete}
+            disabled={confirmDelete || isTitleDuplicate}
             placeholder="Enter the title"
             name="title"
             value={imageData.title}
@@ -253,7 +268,7 @@ const CreateImagePopup = ({
         <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
           <span style={{ fontSize: "16px", fontWeight: "bold" }}>Comment</span>
           <CalciteInput
-            disabled={confirmDelete}
+            disabled={confirmDelete || isTitleDuplicate}
             name="comment"
             placeholder="Enter the comment"
             value={imageData.comment}
@@ -273,9 +288,9 @@ const CreateImagePopup = ({
           open
           style={{ position: "sticky", bottom: "12px" }}
         >
-          <CalciteLabel slot="title" style={{ fontWeight: "normal" }} scale="l">
-            Are you sure you want to delete this item ? This action cannot be
-            undone.
+          <CalciteLabel slot="title" style={{ fontWeight: "normal" }} scale="m">
+            Are you sure you want to delete this item? This action is permanent
+            and cannot be undone.
           </CalciteLabel>
           <div slot="message" style={{ display: "flex", gap: "10px" }}>
             <CalciteButton
@@ -315,35 +330,54 @@ const CreateImagePopup = ({
           </div>
         </CalciteNotice>
       ) : (
-        <div style={{ display: "flex", gap: "5px" }}>
-          <CalciteButton
-            style={{ marginTop: "15px", width: "100%" }}
-            onClick={handleSave}
-            disabled={isInvalid}
-          >
-            {title ? "Update" : "Save"}
-          </CalciteButton>
-          <CalciteButton
-            style={{
-              marginTop: "15px",
-              width: "100%",
-              // "--CalciteButton-background-color": "#f44336",
-            }}
-            slot="secondary"
-            width="full"
-            kind="danger"
-            appearance="outline"
-            onClick={() => {
-              setConfirmDelete(true);
-              scrollContainerRef.current.scrollTo({
-                top: scrollContainerRef.current.scrollHeight,
-                behavior: "smooth",
-              });
-            }}
-          >
-            Delete
-          </CalciteButton>
-        </div>
+        <>
+          {isTitleDuplicate && (
+            <CalciteNotice
+              kind="danger"
+              open
+              style={{ position: "sticky", bottom: "12px", width: "100%" }}
+              closable
+              onCalciteNoticeBeforeClose={() => setIsTitleDuplicate(false)}
+            >
+              <CalciteLabel
+                slot="title"
+                style={{ fontWeight: "normal" }}
+                scale="m"
+              >
+                This title is already in use. Please choose a different one.
+              </CalciteLabel>
+            </CalciteNotice>
+          )}
+          <div style={{ display: "flex", gap: "5px" }}>
+            <CalciteButton
+              style={{ marginTop: "15px", width: "100%" }}
+              onClick={handleSave}
+              disabled={isInvalid || isTitleDuplicate}
+            >
+              {title ? "Update" : "Save"}
+            </CalciteButton>
+            <CalciteButton
+              style={{
+                marginTop: "15px",
+                width: "100%",
+                // "--CalciteButton-background-color": "#f44336",
+              }}
+              slot="secondary"
+              width="full"
+              kind="danger"
+              appearance="outline"
+              onClick={() => {
+                setConfirmDelete(true);
+                scrollContainerRef.current.scrollTo({
+                  top: scrollContainerRef.current.scrollHeight,
+                  behavior: "smooth",
+                });
+              }}
+            >
+              Delete
+            </CalciteButton>
+          </div>
+        </>
       )}
     </div>
   );

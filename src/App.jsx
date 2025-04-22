@@ -135,10 +135,10 @@ function App() {
                 symbol: {
                   type: "simple-marker",
                   style: "circle",
-                  color: "blue",
+                  color: [0, 122, 194],
                   size: 6,
                   outline: {
-                    color: "blue",
+                    color: [0, 122, 194],
                     width: 1,
                   },
                 },
@@ -234,6 +234,7 @@ function App() {
             title={feature.attributes.title}
             comment={feature.attributes.comment}
             feature={feature}
+            fpFeatures={fpFeatures}
           />
         );
         const popup = new Popup({
@@ -367,6 +368,7 @@ function App() {
           layer={fpLayer.current}
           setFpFeatures={setFpFeatures}
           setPhotosActive={setPhotosActive}
+          fpFeatures={fpFeatures}
         />
       )}
     </CalciteShell>

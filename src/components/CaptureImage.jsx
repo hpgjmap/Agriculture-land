@@ -8,11 +8,19 @@ import CreateImagePopup from "./ImagePopup";
 import close from "../assets/close.svg";
 import Graphic from "@arcgis/core/Graphic";
 import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
-const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures, setPhotosActive }) => {
+const CaptureImage = ({
+  setCameraActive,
+  view,
+  layer,
+  setFpFeatures,
+  setPhotosActive,
+  fpFeatures,
+}) => {
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const stream = useRef(null);
 
+  const [recaptureCount, setRecaptureCount] = useState(0);
   const [captured, setCaptured] = useState(false);
   const [heading, setHeading] = useState(null);
 
@@ -46,7 +54,7 @@ const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures, setPhotosAc
       );
       window.removeEventListener("deviceorientation", handleOrientation);
     };
-  }, []);
+  }, [recaptureCount]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -74,7 +82,7 @@ const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures, setPhotosAc
         stream.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [recaptureCount]);
 
   const handleCapture = async () => {
     // iOS-specific permission request
@@ -169,6 +177,7 @@ const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures, setPhotosAc
             title={null}
             comment={null}
             feature={geoJSON}
+            fpFeatures={fpFeatures}
           />
         );
         const popup = new Popup({
@@ -278,13 +287,39 @@ const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures, setPhotosAc
         }}
       >
         {captured ? (
-          <CalciteButton scale="l" onClick={handleCapture}>
-            Recapture
+          <CalciteButton
+            scale="l"
+            onClick={() => {
+              setRecaptureCount((prev) => prev + 1);
+              setCaptured(false);
+            }}
+            iconStart="refresh"
+            style={{
+              "--calcite-button-corner-radius": '100%'
+            }}
+          >
           </CalciteButton>
         ) : (
-          <CalciteButton scale="l" onClick={handleCapture}>
-            Capture
-          </CalciteButton>
+          <div
+            style={{
+              padding: "25px",
+              borderRadius: "100%",
+              background: "white",
+              cursor: "pointer",
+              outline: "3px solid white",
+              border: "4px solid transparent",
+              boxShadow: "0 0 2px black",
+              outlineOffset: "3px",
+              transition: "transform 0.1s ease-in-out",
+            }}
+            title="Click to Capture"
+            onClick={handleCapture}
+            onMouseDown={(e) =>
+              (e.currentTarget.style.transform = "scale(0.95)")
+            }
+            onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+          ></div>
         )}
 
         {captured && (
@@ -292,10 +327,13 @@ const CaptureImage = ({ setCameraActive, view, layer, setFpFeatures, setPhotosAc
             scale="l"
             style={{
               "--calcite-button-background-color": "#4CAF50",
+              "--calcite-button-corner-radius": '100%'
             }}
+            iconStart="save"
+            
             onClick={handleSavingImageAndLocation}
           >
-            Done
+            {/* Done */}
           </CalciteButton>
         )}
       </div>
