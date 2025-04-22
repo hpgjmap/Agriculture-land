@@ -1,1 +1,0 @@
-import{gs as r,ds as s}from"./index-Bbz9ht2q.js";const t=new r;function c(n,e,u){return t.execute(n,e,u,null)}function l(n,e){return t.executeMany(new s(n),e,null).next()}function f(){return t.supportsCurves()}export{c as o,f as s,l as t};
