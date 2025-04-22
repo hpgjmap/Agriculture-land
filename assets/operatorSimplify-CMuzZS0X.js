@@ -1,1 +1,0 @@
-import{gr as o,ds as s}from"./index-ex-t-p6_.js";const r=new o;function c(n,u,e){return r.execute(n,u,e,null)}function f(n,u,e){const t=r.executeMany(new s(n),u,e,null);return Array.from(t)}function i(n,u,e){return r.isSimpleAsFeature(n,u,e,null,null)}function a(){return r.supportsCurves()}export{f as o,a as s,c as t,i as u};
